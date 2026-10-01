@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="nl">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>WSO2 -> JAVA voortgang</title>
+    <style>
+        :root {
+            color-scheme: light;
+            font-family: "Segoe UI", sans-serif;
+            color: #172c2b;
+            background: #f5f7f6;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+        }
+
+        main {
+            width: max-content;
+            min-width: 100%;
+            margin: 0 auto;
+            padding: 36px 20px 64px;
+        }
+
+        h1 {
+            margin: 0 0 6px;
+            font-size: 1.8rem;
+        }
+
+        .subtitle {
+            margin: 0 0 28px;
+            color: #536361;
+        }
+
+        .summary {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 12px;
+        }
+
+        .summary strong {
+            font-size: 1.1rem;
+        }
+
+        .summary output {
+            font-size: 1.65rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+
+        progress {
+            width: 100%;
+            height: 12px;
+            accent-color: #15745f;
+        }
+
+        .overall {
+            margin-bottom: 30px;
+        }
+
+        .table-wrap {
+            border: 1px solid #dce5e1;
+            background: white;
+        }
+
+        table {
+            width: max-content;
+            min-width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 13px 14px;
+            border-bottom: 1px solid #e9eeeb;
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        thead {
+            background: #e8f0ed;
+        }
+
+        th {
+            white-space: nowrap;
+            font-size: .83rem;
+            font-weight: 700;
+        }
+
+        tbody tr:last-child td {
+            border-bottom: 0;
+        }
+
+        tbody tr:hover {
+            background: #f8faf9;
+        }
+
+        td:nth-child(3) {
+            font-weight: 600;
+        }
+
+        .row-number {
+            min-width: 45px;
+            text-align: right;
+            color: #536361;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .drag-handle {
+            border: 0;
+            background: transparent;
+            color: #536361;
+            font: inherit;
+            font-size: 1.3rem;
+            cursor: grab;
+        }
+
+        .drag-handle:focus-visible {
+            outline: 2px solid #15745f;
+        }
+
+        tr.dragging {
+            opacity: .5;
+        }
+
+        tr.drop-before td {
+            box-shadow: inset 0 2px #15745f;
+        }
+
+        tr.drop-after td {
+            box-shadow: inset 0 -2px #15745f;
+        }
+
+        .service,
+        .java {
+            white-space: nowrap;
+        }
+
+        .java span {
+            display: block;
+        }
+
+        .version {
+            white-space: nowrap;
+        }
+
+        .check {
+            text-align: center;
+            min-width: 92px;
+        }
+
+        input[type="checkbox"] {
+            width: 19px;
+            height: 19px;
+            margin: 0;
+            accent-color: #15745f;
+            cursor: pointer;
+        }
+
+        input[type="checkbox"]:focus-visible {
+            outline: 2px solid #172c2b;
+            outline-offset: 3px;
+        }
+
+        .row-progress {
+            min-width: 120px;
+            font-variant-numeric: tabular-nums;
+            font-weight: 600;
+        }
+
+        .row-progress progress {
+            display: block;
+            height: 7px;
+            margin-top: 6px;
+        }
+
+        @media (max-width: 600px) {
+            main {
+                padding: 24px 14px 48px;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main>
+        <h1>Servicevoortgang</h1>
+        <p class="subtitle">Wijzigingen worden lokaal in deze browser opgeslagen.</p>
+        <div class="summary"><strong>Totale voortgang</strong><output id="total-percent">0%</output></div>
+        <progress class="overall" id="total-progress" max="100" value="0" aria-label="Totale voortgang"></progress>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th scope="col" class="row-number">#</th>
+                        <th scope="col" aria-label="Volgorde"></th>
+                        <th scope="col">WSO2 services</th>
+                        <th scope="col">Java service naam</th>
+                        <th scope="col">Versie</th>
+                        <th scope="col" class="check">Playwright tests</th>
+                        <th scope="col" class="check">Load tests</th>
+                        <th scope="col" class="check">ACC</th>
+                        <th scope="col" class="check">PRD</th>
+                        <th scope="col">Voortgang (%)</th>
+                    </tr>
+                </thead>
+                <tbody id="services"></tbody>
+            </table>
+        </div>
+    </main>
+    <script>
+        const stages = ['Playwright tests', 'Load tests', 'ACC', 'PRD'];
+        const services = [
+            ['MarketingPermissieService', ['SalesforceMarketingAdapterService', 'MarketingPermissieService'], 'V2', [1, 1, 1, 1]],
+            ['SalesforceDnAAdapterService', ['SalesforceFacturatieAdapterService', 'SalesforceVerkoopAdapterService (Deels)', 'SalesforceDnAAdapterService'], 'V2', [1, 0, 1, 0]],
+            ['FacturatieService', ['SapFacturatieAdapterService', 'FacturatieService'], 'V2', [1, 0, 1, 0]],
+            ['KickbackService', ['KickbackService'], 'V2', [0, 0, 1, 0]],
+            ['KlantContactService', ['KlantContactService'], 'V2', [1, 0, 1, 0]],
+            ['Orderservice', ['SapOrderAdapterService', 'OrderService'], 'V2', [0, 0, 0, 0]],
+            ['AccountAdministratieService', ['AccountAdministratieService'], 'V2', [0, 0, 0, 0]],
+            ['SalesforceRelatieAdapterService', ['SalesforceRelatieAdapterService?'], 'V2', [0, 0, 0, 0]],
+            ['RelatieAdministratieService', ['SalesforceRelatieAdapterService?', 'RelatieAdministratieService'], 'V5', [0, 0, 0, 0]],
+            ['SapRelatieAdapterService', ['SapRelatieAdapterService'], 'V3', [0, 0, 0, 0]],
+            ['LidmaatschapService', ['LidmaatschapService'], 'V3', [0, 0, 0, 0]],
+            ['RelatieActiviteitService', ['RelatieActiviteitService'], 'V2', [0, 0, 0, 0]],
+            ['SapContractAdapterService', ['SapContractAdapterService'], 'V2', [0, 0, 0, 0]],
+            ['SalesforceGeneriekAdapterService (Library van maken)', ['SalesforceGeneriekAdapterService'], 'N/A', [0, 0, 0, 0]],
+            ['ClaimDataService? (Wordt dit gebruikt?)', ['ClaimDataService?'], 'V2', [0, 0, 0, 0]],
+            ['SwiftOnlineAdapterService', ['SwiftOnlineAdapterService'], 'V2', [0, 0, 0, 0]],
+            ['VluchtclaimAdapterService', ['VluchtclaimAdapterService'], 'V2', [0, 0, 0, 0]],
+            ['VoordeelcoachAdapterService', ['VoordeelcoachAdapterService'], 'V2', [0, 0, 0, 0]],
+            ['FritsAdapterService', ['FritsAdapterService'], 'V2', [0, 0, 0, 0]],
+            ['HomeQgoAdapterService', ['HomeQgoAdapterService'], 'V2', [0, 0, 0, 0]],
+            ['ConsumentenclaimAdapterService', ['ConsumentenclaimAdapterService'], 'V2', [0, 0, 0, 0]]
+        ];
+
+        const storageKey = 'servicevoortgang-v1';
+        const orderStorageKey = 'servicevolgorde-v1';
+        let saved = {};
+        try { saved = JSON.parse(localStorage.getItem(storageKey)) || {}; } catch { }
+        let savedOrder = [];
+        try { savedOrder = JSON.parse(localStorage.getItem(orderStorageKey)) || []; } catch { }
+        if (Array.isArray(savedOrder)) {
+            services.sort((first, second) => {
+                const firstPosition = savedOrder.indexOf(first[0]);
+                const secondPosition = savedOrder.indexOf(second[0]);
+                return (firstPosition < 0 ? services.length : firstPosition)
+                    - (secondPosition < 0 ? services.length : secondPosition);
+            });
+        }
+        const state = Object.fromEntries(services.map(([name, , , initial]) => [
+            name,
+            Array.isArray(saved[name]) && saved[name].length === stages.length
+                ? saved[name].map(Boolean) : initial.map(Boolean)
+        ]));
+        const tbody = document.getElementById('services');
+        let draggedRow = null;
+        let dropTarget = null;
+        let dropAfter = false;
+
+        function updateRowNumbers() {
+            Array.from(tbody.rows).forEach((row, index) => {
+                row.querySelector('.row-number').textContent = index + 1;
+            });
+        }
+
+        function saveOrder() {
+            updateRowNumbers();
+            const order = Array.from(tbody.rows, row => row.dataset.service);
+            try { localStorage.setItem(orderStorageKey, JSON.stringify(order)); } catch { }
+        }
+
+        function clearDropTarget() {
+            dropTarget?.classList.remove('drop-before', 'drop-after');
+            dropTarget = null;
+        }
+
+        tbody.addEventListener('dragover', event => {
+            if (!draggedRow) return;
+            event.preventDefault();
+            const target = event.target.closest('tr');
+            clearDropTarget();
+            if (!target || target === draggedRow) return;
+            dropTarget = target;
+            dropAfter = event.clientY > target.getBoundingClientRect().top + target.offsetHeight / 2;
+            target.classList.add(dropAfter ? 'drop-after' : 'drop-before');
+        });
+        tbody.addEventListener('drop', event => {
+            if (!draggedRow) return;
+            event.preventDefault();
+            if (dropTarget) {
+                tbody.insertBefore(draggedRow, dropAfter ? dropTarget.nextSibling : dropTarget);
+                saveOrder();
+            }
+            clearDropTarget();
+        });
+
+        function updateProgress() {
+            let completed = 0;
+            for (const [name] of services) {
+                const count = state[name].filter(Boolean).length;
+                completed += count;
+                const percent = count * 25;
+                const cell = tbody.querySelector(`[data-progress="${name}"]`);
+                cell.firstChild.textContent = `${percent}%`;
+                cell.querySelector('progress').value = percent;
+            }
+            const total = Math.round(completed / (services.length * stages.length) * 100);
+            document.getElementById('total-percent').value = `${total}%`;
+            document.getElementById('total-progress').value = total;
+        }
+
+        services.forEach(([name, javaNames, version]) => {
+            const row = document.createElement('tr');
+            row.dataset.service = name;
+            const numberCell = document.createElement('td');
+            numberCell.className = 'row-number';
+            row.append(numberCell);
+            const handleCell = document.createElement('td');
+            const handle = document.createElement('button');
+            handle.type = 'button';
+            handle.className = 'drag-handle';
+            handle.textContent = '\u2637';
+            handle.draggable = true;
+            handle.title = `Sleep ${name} om de volgorde te wijzigen`;
+            handle.setAttribute('aria-label', `Verplaats ${name}; gebruik ook de pijltjestoetsen`);
+            handle.addEventListener('dragstart', event => {
+                draggedRow = row;
+                event.dataTransfer.effectAllowed = 'move';
+                event.dataTransfer.setData('text/plain', name);
+                requestAnimationFrame(() => row.classList.add('dragging'));
+            });
+            handle.addEventListener('dragend', () => {
+                row.classList.remove('dragging');
+                clearDropTarget();
+                draggedRow = null;
+            });
+            handle.addEventListener('keydown', event => {
+                if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+                event.preventDefault();
+                const neighbor = event.key === 'ArrowUp' ? row.previousElementSibling : row.nextElementSibling;
+                if (!neighbor) return;
+                tbody.insertBefore(row, event.key === 'ArrowUp' ? neighbor : neighbor.nextSibling);
+                saveOrder();
+            });
+            handleCell.append(handle);
+            row.append(handleCell);
+            for (const [text, className] of [[name, 'service'], [null, 'java'], [version, 'version']]) {
+                const cell = document.createElement('td');
+                cell.className = className;
+                if (text !== null) cell.textContent = text;
+                else javaNames.forEach(javaName => {
+                    const line = document.createElement('span');
+                    line.textContent = javaName;
+                    cell.append(line);
+                });
+                row.append(cell);
+            }
+            stages.forEach((stage, stageIndex) => {
+                const cell = document.createElement('td');
+                cell.className = 'check';
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.checked = state[name][stageIndex];
+                checkbox.setAttribute('aria-label', `${stage} voor ${name}`);
+                checkbox.addEventListener('change', () => {
+                    state[name][stageIndex] = checkbox.checked;
+                    try { localStorage.setItem(storageKey, JSON.stringify(state)); } catch { }
+                    updateProgress();
+                });
+                cell.append(checkbox);
+                row.append(cell);
+            });
+            const progressCell = document.createElement('td');
+            progressCell.className = 'row-progress';
+            progressCell.dataset.progress = name;
+            progressCell.append(document.createTextNode('0%'));
+            const bar = document.createElement('progress');
+            bar.max = 100;
+            bar.setAttribute('aria-label', `Voortgang voor ${name}`);
+            progressCell.append(bar);
+            row.append(progressCell);
+            tbody.append(row);
+        });
+        updateRowNumbers();
+        updateProgress();
+    </script>
+</body>
+
+</html>
