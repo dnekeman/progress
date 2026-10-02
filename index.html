@@ -284,7 +284,8 @@
 <body>
     <main>
         <h1>Servicevoortgang</h1>
-        <p id="connection-status" role="status" aria-live="polite">Openbare pagina: iedereen kan de voortgang wijzigen.</p>
+        <p id="connection-status" role="status" aria-live="polite">Openbare pagina: iedereen kan de voortgang wijzigen.
+        </p>
         <div class="summary"><strong>Totale voortgang</strong><output id="total-percent">0%</output></div>
         <progress class="overall" id="total-progress" max="100" value="0" aria-label="Totale voortgang"></progress>
         <div class="table-wrap">
@@ -351,72 +352,72 @@
         function renderServices() {
             tbody.replaceChildren();
             services.forEach(service => {
-            const row = document.createElement('tr');
-            row.dataset.service = service.service_key;
-            const numberCell = document.createElement('td');
-            numberCell.className = 'row-number';
-            row.append(numberCell);
-            for (const [text, className] of [
-                [service.wso2_service, 'service'],
-                [null, 'java'],
-                [service.version, 'version']
-            ]) {
-                const cell = document.createElement('td');
-                cell.className = className;
-                cell.dataset.label = className === 'service' ? 'WSO2 service'
-                    : className === 'java' ? 'Java service naam' : 'Versie';
-                if (text !== null) cell.textContent = text;
-                else service.java_service_names.forEach(javaName => {
-                    const line = document.createElement('span');
-                    line.textContent = javaName;
-                    cell.append(line);
+                const row = document.createElement('tr');
+                row.dataset.service = service.service_key;
+                const numberCell = document.createElement('td');
+                numberCell.className = 'row-number';
+                row.append(numberCell);
+                for (const [text, className] of [
+                    [service.wso2_service, 'service'],
+                    [null, 'java'],
+                    [service.version, 'version']
+                ]) {
+                    const cell = document.createElement('td');
+                    cell.className = className;
+                    cell.dataset.label = className === 'service' ? 'WSO2 service'
+                        : className === 'java' ? 'Java service naam' : 'Versie';
+                    if (text !== null) cell.textContent = text;
+                    else service.java_service_names.forEach(javaName => {
+                        const line = document.createElement('span');
+                        line.textContent = javaName;
+                        cell.append(line);
+                    });
+                    row.append(cell);
+                }
+                stages.forEach((stage, stageIndex) => {
+                    const cell = document.createElement('td');
+                    cell.className = 'check';
+                    cell.dataset.label = stage.label;
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.checked = service.stageValues[stageIndex];
+                    checkbox.setAttribute('aria-label', `${stage.label} voor ${service.wso2_service}`);
+                    checkbox.addEventListener('change', async () => {
+                        const previousValue = service.stageValues[stageIndex];
+                        const nextValue = checkbox.checked;
+                        checkbox.disabled = true;
+                        const { error } = await supabaseClient.from(TABLE_NAME)
+                            .update({ [stage.column]: nextValue })
+                            .eq('service_key', service.service_key);
+                        if (error) {
+                            checkbox.checked = previousValue;
+                            status.textContent = `Opslaan mislukt: ${error.message}`;
+                        } else {
+                            service.stageValues[stageIndex] = nextValue;
+                            updateProgress();
+                            status.textContent = 'Voortgang opgeslagen en gedeeld.';
+                        }
+                        checkbox.disabled = false;
+                    });
+                    cell.append(checkbox);
+                    row.append(cell);
                 });
-                row.append(cell);
-            }
-            stages.forEach((stage, stageIndex) => {
-                const cell = document.createElement('td');
-                cell.className = 'check';
-                cell.dataset.label = stage.label;
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.checked = service.stageValues[stageIndex];
-                checkbox.setAttribute('aria-label', `${stage.label} voor ${service.wso2_service}`);
-                checkbox.addEventListener('change', async () => {
-                    const previousValue = service.stageValues[stageIndex];
-                    const nextValue = checkbox.checked;
-                    checkbox.disabled = true;
-                    const { error } = await supabaseClient.from(TABLE_NAME)
-                        .update({ [stage.column]: nextValue })
-                        .eq('service_key', service.service_key);
-                    if (error) {
-                        checkbox.checked = previousValue;
-                        status.textContent = `Opslaan mislukt: ${error.message}`;
-                    } else {
-                        service.stageValues[stageIndex] = nextValue;
-                        updateProgress();
-                        status.textContent = 'Voortgang opgeslagen en gedeeld.';
-                    }
-                    checkbox.disabled = false;
-                });
-                cell.append(checkbox);
-                row.append(cell);
-            });
-            const progressCell = document.createElement('td');
-            progressCell.className = 'row-progress';
-            progressCell.dataset.label = 'Voortgang';
-            progressCell.dataset.progress = service.service_key;
-            progressCell.append(document.createTextNode('0%'));
-            const bar = document.createElement('div');
-            bar.className = 'progress-segments';
-            bar.setAttribute('role', 'progressbar');
-            bar.setAttribute('aria-valuemin', 0);
-            bar.setAttribute('aria-valuemax', 100);
-            bar.setAttribute('aria-valuenow', 0);
-            bar.setAttribute('aria-label', `Voortgang voor ${service.wso2_service}`);
-            stages.forEach(() => bar.append(document.createElement('span')));
-            progressCell.append(bar);
-            row.append(progressCell);
-            tbody.append(row);
+                const progressCell = document.createElement('td');
+                progressCell.className = 'row-progress';
+                progressCell.dataset.label = 'Voortgang';
+                progressCell.dataset.progress = service.service_key;
+                progressCell.append(document.createTextNode('0%'));
+                const bar = document.createElement('div');
+                bar.className = 'progress-segments';
+                bar.setAttribute('role', 'progressbar');
+                bar.setAttribute('aria-valuemin', 0);
+                bar.setAttribute('aria-valuemax', 100);
+                bar.setAttribute('aria-valuenow', 0);
+                bar.setAttribute('aria-label', `Voortgang voor ${service.wso2_service}`);
+                stages.forEach(() => bar.append(document.createElement('span')));
+                progressCell.append(bar);
+                row.append(progressCell);
+                tbody.append(row);
             });
             updateRowNumbers();
             updateProgress();
