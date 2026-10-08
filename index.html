@@ -94,15 +94,15 @@
         }
 
         th:nth-child(1) {
-            width: 3%;
+            width: 5%;
         }
 
         th:nth-child(2) {
-            width: 30%;
+            width: 24%;
         }
 
         th:nth-child(3) {
-            width: 30%;
+            width: 24%;
         }
 
         th:nth-child(4) {
@@ -110,23 +110,27 @@
         }
 
         th:nth-child(5) {
-            width: 7%;
+            width: 8%;
         }
 
         th:nth-child(6) {
-            width: 7%;
+            width: 8%;
         }
 
         th:nth-child(7) {
-            width: 5%;
+            width: 7%;
         }
 
         th:nth-child(8) {
-            width: 5%;
+            width: 7%;
         }
 
         th:nth-child(9) {
-            width: 8%;
+            width: 7%;
+        }
+
+        th:nth-child(10) {
+            width: 5%;
         }
 
         thead {
@@ -143,8 +147,24 @@
             border-bottom: 0;
         }
 
+        tbody tr {
+            background-color: hsl(var(--java-service-hue) 52% 93%);
+        }
+
         tbody tr:hover {
-            background: #f8faf9;
+            filter: brightness(.96);
+        }
+
+        tbody tr.dragging {
+            opacity: .5;
+        }
+
+        tbody tr.drop-before td {
+            box-shadow: inset 0 2px #15745f;
+        }
+
+        tbody tr.drop-after td {
+            box-shadow: inset 0 -2px #15745f;
         }
 
         td:nth-child(3) {
@@ -157,9 +177,71 @@
             font-variant-numeric: tabular-nums;
         }
 
+        .row-controls {
+            display: flex;
+            min-height: 36px;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 4px;
+        }
+
+        .row-index {
+            min-width: 2ch;
+        }
+
+        .drag-handle {
+            display: grid;
+            width: 30px;
+            height: 36px;
+            place-items: center;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: #536361;
+            font: inherit;
+            line-height: 1;
+            cursor: grab;
+            touch-action: none;
+        }
+
+        .drag-handle:active {
+            cursor: grabbing;
+        }
+
+        .drag-handle:focus-visible {
+            outline: 2px solid #15745f;
+            outline-offset: 2px;
+        }
+
+        .drag-handle:disabled {
+            cursor: wait;
+            opacity: .55;
+        }
+
         .service,
         .java {
             overflow-wrap: anywhere;
+            background-color: hsl(var(--java-service-hue) 54% 89%);
+            box-shadow: inset 3px 0 hsl(var(--java-service-hue) 48% 45%);
+        }
+
+        .service-link {
+            display: inline-block;
+            padding: 3px 6px;
+            border: 1px solid hsl(var(--java-service-hue) 38% 72%);
+            border-radius: 3px;
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .service-link:hover {
+            background: hsl(var(--java-service-hue) 54% 82%);
+            text-decoration: underline;
+        }
+
+        .service-link:focus-visible {
+            outline: 2px solid #15745f;
+            outline-offset: 2px;
         }
 
         .java span {
@@ -191,7 +273,7 @@
             display: grid;
             width: 76px;
             max-width: 100%;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
+            grid-template-columns: repeat(5, minmax(0, 1fr));
             gap: 3px;
             margin-top: 6px;
         }
@@ -235,7 +317,6 @@
                 margin-bottom: 10px;
                 padding: 8px 12px;
                 border: 1px solid #dce5e1;
-                background: white;
             }
 
             tbody td {
@@ -256,13 +337,21 @@
                 font-weight: 400;
             }
 
-            tbody td:nth-child(1) {
-                display: none;
+            tbody td.row-number {
+                grid-column: 1 / -1;
+                flex-direction: row;
+                justify-content: flex-start;
+                gap: 8px;
+                padding-top: 2px;
+            }
+
+            tbody td.row-number::before {
+                margin: 0;
             }
 
             tbody td:nth-child(2),
             tbody td:nth-child(3),
-            tbody td:nth-child(9) {
+            tbody td:nth-child(10) {
                 grid-column: 1 / -1;
             }
 
@@ -296,10 +385,11 @@
                         <th scope="col">WSO2 services</th>
                         <th scope="col">Java service naam</th>
                         <th scope="col">Versie</th>
-                        <th scope="col" class="check">Playwright tests</th>
-                        <th scope="col" class="check">Load tests</th>
-                        <th scope="col" class="check">ACC</th>
-                        <th scope="col" class="check">PRD</th>
+                        <th scope="col" class="check">Tests created</th>
+                        <th scope="col" class="check">Test successful</th>
+                        <th scope="col" class="check">Deployed on ACC</th>
+                        <th scope="col" class="check">Deployed on PRD</th>
+                        <th scope="col" class="check">Live on PRD</th>
                         <th scope="col">Voortgang (%)</th>
                     </tr>
                 </thead>
@@ -312,29 +402,143 @@
         const SUPABASE_URL = 'https://nfkmnfqblkffafnppgdi.supabase.co';
         const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_XTktAc-2tqJA_B0NfOuClQ_oIvq762W';
         const TABLE_NAME = 'service_progress';
+        const serviceIssueLinks = new Map([
+            ['MarketingPermissieService', {
+                id: 'YGGY-1054',
+                url: 'https://consumentenbond.jira.com/browse/YGGY-1054?atlOrigin=eyJpIjoiNGU1MDYwMGMxMDlkNGE0ZWIxMjUyOTkxMTA2YzQzMGUiLCJwIjoiaiJ9'
+            }],
+            ['FacturatieService', {
+                id: 'YGGY-1081',
+                url: 'https://consumentenbond.jira.com/browse/YGGY-1081?atlOrigin=eyJpIjoiYzA3MzYzODk5NWRjNGVhMjk2NDJmMjE3MTRjZWQxNjUiLCJwIjoiaiJ9'
+            }],
+            ['KickbackService', {
+                id: 'YGGY-1095',
+                url: 'https://consumentenbond.jira.com/browse/YGGY-1095?atlOrigin=eyJpIjoiNzVlNjkwNzRhYzVmNDliODg5NjZlZTFhMmI1NjExZTkiLCJwIjoiaiJ9'
+            }],
+            ['KlantContactService', {
+                id: 'YGGY-1093',
+                url: 'https://consumentenbond.jira.com/browse/YGGY-1093?atlOrigin=eyJpIjoiY2NlZjk0OWYyMjFkNDFkYzk5MGVjOTk3OWM2NDNjZDIiLCJwIjoiaiJ9'
+            }],
+            ['Orderservice', {
+                id: 'YGGY-1085',
+                url: 'https://consumentenbond.jira.com/browse/YGGY-1085?atlOrigin=eyJpIjoiZTkzZWJkN2NmNTEwNDAyNmE3NTc5NGRhMzM3OTljODYiLCJwIjoiaiJ9'
+            }],
+            ['SalesforceFacturatieAdapterService', {
+                id: 'YGGY-1092',
+                url: 'https://consumentenbond.jira.com/browse/YGGY-1092?atlOrigin=eyJpIjoiOGUyNzcwNzFjMDU3NDFmNmIyOTBkYjg1Yjc2OTQ1MTkiLCJwIjoiaiJ9'
+            }],
+            ['SalesforceVerkoopAdapterService', {
+                id: 'YGGY-1075',
+                url: 'https://consumentenbond.jira.com/browse/YGGY-1075?atlOrigin=eyJpIjoiMTEwMDIxZDlmMzZmNGI4OGE1ZjY4NmE1MzRlM2MwYTIiLCJwIjoiaiJ9'
+            }]
+        ]);
         const stages = [
-            { label: 'Playwright tests', column: 'playwright_tests' },
-            { label: 'Load tests', column: 'load_tests' },
-            { label: 'ACC', column: 'acc' },
-            { label: 'PRD', column: 'prd' }
+            { label: 'Tests created', column: 'tests_created' },
+            { label: 'Test successful', column: 'test_successful' },
+            { label: 'Deployed on ACC', column: 'deployed_on_acc' },
+            { label: 'Deployed on PRD', column: 'deployed_on_prd' },
+            { label: 'Live on PRD', column: 'live_on_prd' }
         ];
         const tbody = document.getElementById('services');
         const status = document.getElementById('connection-status');
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
         let services = [];
+        let draggedRow = null;
+        let dragStartOrder = null;
+        let dropTarget = null;
+        let dropAfter = false;
 
         function updateRowNumbers() {
             Array.from(tbody.rows).forEach((row, index) => {
-                row.querySelector('.row-number').textContent = index + 1;
+                row.querySelector('.row-index').textContent = index + 1;
             });
         }
+
+        function getServiceOrder() {
+            return Array.from(tbody.rows, row => row.dataset.service);
+        }
+
+        function restoreServiceOrder(order) {
+            const rowsByKey = new Map(Array.from(tbody.rows, row => [row.dataset.service, row]));
+            order.forEach(serviceKey => tbody.append(rowsByKey.get(serviceKey)));
+        }
+
+        function clearDropIndicators() {
+            tbody.querySelectorAll('.drop-before, .drop-after').forEach(row => {
+                row.classList.remove('drop-before', 'drop-after');
+            });
+        }
+
+        async function saveServiceOrder(previousOrder) {
+            const orderedKeys = getServiceOrder();
+            if (orderedKeys.every((key, index) => key === previousOrder[index])) return;
+
+            const handles = tbody.querySelectorAll('.drag-handle');
+            handles.forEach(handle => { handle.disabled = true; });
+            status.textContent = 'Volgorde opslaan...';
+            let error;
+            try {
+                ({ error } = await supabaseClient.rpc('reorder_service_progress', {
+                    service_keys: orderedKeys
+                }));
+            } catch (requestError) {
+                error = requestError;
+            }
+            if (error) {
+                restoreServiceOrder(previousOrder);
+                updateRowNumbers();
+                status.textContent = `Volgorde opslaan mislukt: ${error.message}`;
+            } else {
+                const positions = new Map(orderedKeys.map((key, index) => [key, index]));
+                services.sort((first, second) => positions.get(first.service_key) - positions.get(second.service_key));
+                services.forEach((service, index) => { service.sort_order = index + 1; });
+                updateRowNumbers();
+                status.textContent = 'Nieuwe volgorde opgeslagen.';
+            }
+            handles.forEach(handle => { handle.disabled = false; });
+        }
+
+        tbody.addEventListener('dragover', event => {
+            if (!draggedRow) return;
+            const target = event.target.closest('tr');
+            if (!target || target === draggedRow) {
+                clearDropIndicators();
+                dropTarget = null;
+                return;
+            }
+            event.preventDefault();
+            const targetBounds = target.getBoundingClientRect();
+            const placeAfter = event.clientY >= targetBounds.top + targetBounds.height * 0.4;
+            if (target !== dropTarget || placeAfter !== dropAfter) {
+                clearDropIndicators();
+                dropTarget = target;
+                dropAfter = placeAfter;
+                target.classList.add(dropAfter ? 'drop-after' : 'drop-before');
+            }
+        });
+
+        tbody.addEventListener('drop', event => {
+            if (!draggedRow) return;
+            event.preventDefault();
+            const previousOrder = dragStartOrder;
+            if (dropTarget && dropTarget !== draggedRow) {
+                tbody.insertBefore(draggedRow, dropAfter ? dropTarget.nextSibling : dropTarget);
+            }
+            draggedRow.classList.remove('dragging');
+            draggedRow = null;
+            dragStartOrder = null;
+            dropTarget = null;
+            updateRowNumbers();
+            clearDropIndicators();
+            void saveServiceOrder(previousOrder);
+        });
 
         function updateProgress() {
             let completed = 0;
             for (const service of services) {
                 const count = service.stageValues.filter(Boolean).length;
                 completed += count;
-                const percent = count * 25;
+                const percent = Math.round(count / stages.length * 100);
                 const cell = tbody.querySelector(`[data-progress="${CSS.escape(service.service_key)}"]`);
                 cell.firstChild.textContent = `${percent}%`;
                 const segments = cell.querySelector('.progress-segments');
@@ -351,37 +555,97 @@
 
         function renderServices() {
             tbody.replaceChildren();
+            const javaServiceNames = [...new Set(services.map(service => service.java_service_name))]
+                .sort((first, second) => first.localeCompare(second));
+            const javaServiceHues = new Map(javaServiceNames.map((name, index) => [
+                name,
+                Math.round(index * 360 / javaServiceNames.length)
+            ]));
             services.forEach(service => {
                 const row = document.createElement('tr');
                 row.dataset.service = service.service_key;
+                row.style.setProperty('--java-service-hue', javaServiceHues.get(service.java_service_name));
                 const numberCell = document.createElement('td');
                 numberCell.className = 'row-number';
+                numberCell.dataset.label = 'Volgorde';
+                const dragHandle = document.createElement('button');
+                dragHandle.type = 'button';
+                dragHandle.className = 'drag-handle';
+                dragHandle.textContent = '\u283f';
+                dragHandle.draggable = true;
+                dragHandle.title = 'Sleep om de volgorde te wijzigen';
+                dragHandle.setAttribute('aria-label', `Verplaats ${service.wso2_service} (${service.java_service_name})`);
+                dragHandle.addEventListener('dragstart', event => {
+                    draggedRow = row;
+                    dragStartOrder = getServiceOrder();
+                    dropTarget = null;
+                    row.classList.add('dragging');
+                    event.dataTransfer.effectAllowed = 'move';
+                    event.dataTransfer.dropEffect = 'move';
+                    event.dataTransfer.setData('text/plain', service.service_key);
+                });
+                dragHandle.addEventListener('dragend', () => {
+                    if (!draggedRow) return;
+                    const previousOrder = dragStartOrder;
+                    draggedRow.classList.remove('dragging');
+                    draggedRow = null;
+                    dragStartOrder = null;
+                    dropTarget = null;
+                    clearDropIndicators();
+                    restoreServiceOrder(previousOrder);
+                    updateRowNumbers();
+                });
+                dragHandle.addEventListener('keydown', event => {
+                    if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+                    event.preventDefault();
+                    const neighbor = event.key === 'ArrowUp' ? row.previousElementSibling : row.nextElementSibling;
+                    if (!neighbor) return;
+                    const previousOrder = getServiceOrder();
+                    tbody.insertBefore(row, event.key === 'ArrowUp' ? neighbor : neighbor.nextSibling);
+                    updateRowNumbers();
+                    void saveServiceOrder(previousOrder);
+                });
+                const rowIndex = document.createElement('span');
+                rowIndex.className = 'row-index';
+                const rowControls = document.createElement('div');
+                rowControls.className = 'row-controls';
+                rowControls.append(rowIndex, dragHandle);
+                numberCell.append(rowControls);
                 row.append(numberCell);
                 for (const [text, className] of [
                     [service.wso2_service, 'service'],
-                    [null, 'java'],
+                    [service.java_service_name, 'java'],
                     [service.version, 'version']
                 ]) {
                     const cell = document.createElement('td');
                     cell.className = className;
                     cell.dataset.label = className === 'service' ? 'WSO2 service'
                         : className === 'java' ? 'Java service naam' : 'Versie';
-                    if (text !== null) cell.textContent = text;
-                    else service.java_service_names.forEach(javaName => {
-                        const line = document.createElement('span');
-                        line.textContent = javaName;
-                        cell.append(line);
-                    });
+                    const issue = className === 'java'
+                        ? serviceIssueLinks.get(service.wso2_service) ?? serviceIssueLinks.get(text)
+                        : null;
+                    if (issue) {
+                        const link = document.createElement('a');
+                        link.className = 'service-link';
+                        link.href = issue.url;
+                        link.target = '_blank';
+                        link.rel = 'noopener noreferrer';
+                        link.textContent = text;
+                        link.setAttribute('aria-label', `Open Jira-werkitem ${issue.id} voor ${service.wso2_service} (${text})`);
+                        cell.append(link);
+                    } else {
+                        cell.textContent = text;
+                    }
                     row.append(cell);
                 }
-                stages.forEach((stage, stageIndex) => {
+                const stageCells = stages.map((stage, stageIndex) => {
                     const cell = document.createElement('td');
                     cell.className = 'check';
                     cell.dataset.label = stage.label;
                     const checkbox = document.createElement('input');
                     checkbox.type = 'checkbox';
                     checkbox.checked = service.stageValues[stageIndex];
-                    checkbox.setAttribute('aria-label', `${stage.label} voor ${service.wso2_service}`);
+                    checkbox.setAttribute('aria-label', `${stage.label} voor ${service.wso2_service} (${service.java_service_name})`);
                     checkbox.addEventListener('change', async () => {
                         const previousValue = service.stageValues[stageIndex];
                         const nextValue = checkbox.checked;
@@ -400,8 +664,9 @@
                         checkbox.disabled = false;
                     });
                     cell.append(checkbox);
-                    row.append(cell);
+                    return cell;
                 });
+                row.append(...stageCells);
                 const progressCell = document.createElement('td');
                 progressCell.className = 'row-progress';
                 progressCell.dataset.label = 'Voortgang';
@@ -409,11 +674,12 @@
                 progressCell.append(document.createTextNode('0%'));
                 const bar = document.createElement('div');
                 bar.className = 'progress-segments';
+                bar.style.gridTemplateColumns = `repeat(${stages.length}, minmax(0, 1fr))`;
                 bar.setAttribute('role', 'progressbar');
                 bar.setAttribute('aria-valuemin', 0);
                 bar.setAttribute('aria-valuemax', 100);
                 bar.setAttribute('aria-valuenow', 0);
-                bar.setAttribute('aria-label', `Voortgang voor ${service.wso2_service}`);
+                bar.setAttribute('aria-label', `Voortgang voor ${service.wso2_service} (${service.java_service_name})`);
                 stages.forEach(() => bar.append(document.createElement('span')));
                 progressCell.append(bar);
                 row.append(progressCell);
@@ -426,7 +692,7 @@
         async function loadServices() {
             status.textContent = 'Gedeelde voortgang laden...';
             const { data, error } = await supabaseClient.from(TABLE_NAME)
-                .select('service_key, wso2_service, java_service_names, version, sort_order, playwright_tests, load_tests, acc, prd')
+                .select('service_key, wso2_service, java_service_name, version, sort_order, tests_created, test_successful, live_on_prd, deployed_on_acc, deployed_on_prd')
                 .order('sort_order');
             if (error) {
                 services = [];
