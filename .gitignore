@@ -1,0 +1,9 @@
+.neon
+.env
+.env.*
+!.env.example
+node_modules/
+dist/
+backups/
+playwright-report/
+test-results/

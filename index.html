@@ -397,11 +397,9 @@
             </table>
         </div>
     </main>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="api-config.js"></script>
     <script>
-        const SUPABASE_URL = 'https://nfkmnfqblkffafnppgdi.supabase.co';
-        const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_XTktAc-2tqJA_B0NfOuClQ_oIvq762W';
-        const TABLE_NAME = 'service_progress';
+        const API_URL = window.PROGRESS_API_URL;
         const serviceIssueLinks = new Map([
             ['MarketingPermissieService', {
                 id: 'YGGY-1054',
@@ -441,12 +439,29 @@
         ];
         const tbody = document.getElementById('services');
         const status = document.getElementById('connection-status');
-        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
         let services = [];
         let draggedRow = null;
         let dragStartOrder = null;
         let dropTarget = null;
         let dropAfter = false;
+
+        async function requestApi(path, method = 'GET', body) {
+            try {
+                if (!API_URL) throw new Error('API-configuratie ontbreekt.');
+                const response = await fetch(new URL(path, API_URL), {
+                    method,
+                    headers: body === undefined ? {} : { 'Content-Type': 'application/json' },
+                    body: body === undefined ? undefined : JSON.stringify(body),
+                    cache: 'no-store',
+                    signal: AbortSignal.timeout(20000)
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+                return { data, error: null };
+            } catch (error) {
+                return { data: null, error };
+            }
+        }
 
         function updateRowNumbers() {
             Array.from(tbody.rows).forEach((row, index) => {
@@ -478,7 +493,7 @@
             status.textContent = 'Volgorde opslaan...';
             let error;
             try {
-                ({ error } = await supabaseClient.rpc('reorder_service_progress', {
+                ({ error } = await requestApi('order', 'POST', {
                     service_keys: orderedKeys
                 }));
             } catch (requestError) {
@@ -650,9 +665,9 @@
                         const previousValue = service.stageValues[stageIndex];
                         const nextValue = checkbox.checked;
                         checkbox.disabled = true;
-                        const { error } = await supabaseClient.from(TABLE_NAME)
-                            .update({ [stage.column]: nextValue })
-                            .eq('service_key', service.service_key);
+                        const { error } = await requestApi(`services/${encodeURIComponent(service.service_key)}`, 'PATCH', {
+                            [stage.column]: nextValue
+                        });
                         if (error) {
                             checkbox.checked = previousValue;
                             status.textContent = `Opslaan mislukt: ${error.message}`;
@@ -691,9 +706,7 @@
 
         async function loadServices() {
             status.textContent = 'Gedeelde voortgang laden...';
-            const { data, error } = await supabaseClient.from(TABLE_NAME)
-                .select('service_key, wso2_service, java_service_name, version, sort_order, tests_created, test_successful, live_on_prd, deployed_on_acc, deployed_on_prd')
-                .order('sort_order');
+            const { data, error } = await requestApi('services');
             if (error) {
                 services = [];
                 renderServices();
