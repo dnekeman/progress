@@ -36,11 +36,13 @@ async function sourceRows() {
         const url = new URL(process.env.SOURCE_URL);
         url.searchParams.set('select', '*');
         url.searchParams.set('order', 'sort_order');
-        const response = await fetch(url, { headers: {
-            apikey: process.env.SOURCE_API_KEY,
-            Prefer: 'count=exact',
-            Range: `${rows.length}-${rows.length + 999}`
-        } });
+        const response = await fetch(url, {
+            headers: {
+                apikey: process.env.SOURCE_API_KEY,
+                Prefer: 'count=exact',
+                Range: `${rows.length}-${rows.length + 999}`
+            }
+        });
         assert.ok(response.ok, `Source read failed: HTTP ${response.status}.`);
         const count = response.headers.get('content-range')?.split('/')[1];
         assert.match(count ?? '', /^\d+$/, 'Source must provide an exact row count.');

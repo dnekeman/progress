@@ -4,10 +4,12 @@ import { createApp } from './progress.mjs';
 
 function fixture(result = { rows: [], rowCount: 1 }) {
     const calls = [];
-    const app = createApp({ query: async (...args) => {
-        calls.push(args);
-        return result;
-    } });
+    const app = createApp({
+        query: async (...args) => {
+            calls.push(args);
+            return result;
+        }
+    });
     const request = (path, method, body) => app.request(path, {
         method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
     });
